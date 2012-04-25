@@ -11,10 +11,10 @@ class ClientApplication < ActiveRecord::Base
 
   validates_format_of :url, :with => /\Ahttp(s?):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/i
   validates_format_of :support_url, :with => /\Ahttp(s?):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/i, :allow_blank=>true
-  validates_format_of :callback_url, :with => /\Ahttp(s?):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/i, :allow_blank=>true
 
   attr_accessor :token_callback_url
   attr_accessible :name,:url,:callback_url,:support_url
+  validate :validate_for_callback_url
 
   def self.find_token(token_key)
     token = OauthToken.find_by_token(token_key, :include => :client_application)
@@ -49,7 +49,26 @@ class ClientApplication < ActiveRecord::Base
     RequestToken.create :client_application => self, :callback_url=>self.token_callback_url
   end
 
+  def oob?
+    self.callback_url.to_s.downcase == 'oob'
+  end
+
+
 protected
+
+  def validate_for_callback_url
+    return if callback_url.to_s == 'oob' || callback_url.blank?
+    self.errors.add(:support_url ,:invalid) unless valid_uri?(callback_url)
+  end
+
+  def valid_uri?(url_str)
+    begin
+      return ['http','https'].include?(URI.parse(url_str.to_s).scheme)
+    rescue
+      return false
+    end
+  end
+
 
   def generate_keys
     self.key = OAuth::Helper.generate_key(40)[0,40]
