@@ -12,7 +12,7 @@ class OAuthEcho
     response[:client_application] = env["oauth.client_application"].key if env["oauth.client_application"]
     response[:oauth_version]      = env["oauth.version"]                if env["oauth.version"]
     response[:strategies]         = env["oauth.strategies"]             if env["oauth.strategies"]
-     [200, { "Accept" => "application/json" }, [MultiJson.encode(response)]]
+     [200, { "Accept" => "application/json" }, [MultiJson.dump(response)]]
   end
 end
 
@@ -26,7 +26,7 @@ describe OAuth::Rack::OAuthFilter do
   it "should pass through without oauth" do
     get '/'
     last_response.should be_ok
-    response = MultiJson.decode(last_response.body)
+    response = MultiJson.load(last_response.body)
     response.should == {}
   end
 
@@ -35,7 +35,7 @@ describe OAuth::Rack::OAuthFilter do
       it "should sign with consumer" do
         get '/',{},{"HTTP_AUTHORIZATION"=>'OAuth oauth_consumer_key="my_consumer", oauth_nonce="amrLDyFE2AMztx5fOYDD1OEqWps6Mc2mAR5qyO44Rj8", oauth_signature="KCSg0RUfVFUcyhrgJo580H8ey0c%3D", oauth_signature_method="HMAC-SHA1", oauth_timestamp="1295039581", oauth_version="1.0"'}
         last_response.should be_ok
-        response = MultiJson.decode(last_response.body)
+        response = MultiJson.load(last_response.body)
         response.should == {"client_application" => "my_consumer", "oauth_version"=>1, "strategies"=>["two_legged"]}
       end
 
@@ -45,7 +45,7 @@ describe OAuth::Rack::OAuthFilter do
         client_application.tokens.stub!(:first).and_return(AccessToken.new("my_token"))
         get '/',{},{"HTTP_AUTHORIZATION"=>'OAuth oauth_consumer_key="my_consumer", oauth_nonce="oiFHXoN0172eigBBUfgaZLdQg7ycGekv8iTdfkCStY", oauth_signature="y35B2DqTWaNlzNX0p4wv%2FJAGzg8%3D", oauth_signature_method="HMAC-SHA1", oauth_timestamp="1295040394", oauth_token="my_token", oauth_version="1.0"'}
         last_response.should be_ok
-        response = MultiJson.decode(last_response.body)
+        response = MultiJson.load(last_response.body)
         response.should == {"client_application" => "my_consumer", "oauth_token"=>"my_token","oauth_version"=>1, "strategies"=>["oauth10_token","token","oauth10_access_token"]}
       end
 
@@ -55,7 +55,7 @@ describe OAuth::Rack::OAuthFilter do
         client_application.tokens.stub!(:first).and_return(RequestToken.new("my_token"))
         get '/',{},{"HTTP_AUTHORIZATION"=>'OAuth oauth_consumer_key="my_consumer", oauth_nonce="oiFHXoN0172eigBBUfgaZLdQg7ycGekv8iTdfkCStY", oauth_signature="y35B2DqTWaNlzNX0p4wv%2FJAGzg8%3D", oauth_signature_method="HMAC-SHA1", oauth_timestamp="1295040394", oauth_token="my_token", oauth_version="1.0"'}
         last_response.should be_ok
-        response = MultiJson.decode(last_response.body)
+        response = MultiJson.load(last_response.body)
         response.should == {"client_application" => "my_consumer", "oauth_token"=>"my_token","oauth_version"=>1, "strategies"=>["oauth10_token","oauth10_request_token"]}
       end
     end
@@ -64,7 +64,7 @@ describe OAuth::Rack::OAuthFilter do
       it "should sign with consumer" do
         get '/',{},{"HTTP_AUTHORIZATION"=>'OAuth oauth_consumer_key="my_consumer",oauth_nonce="amrLDyFE2AMztx5fOYDD1OEqWps6Mc2mAR5qyO44Rj8",oauth_signature="KCSg0RUfVFUcyhrgJo580H8ey0c%3D",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1295039581",oauth_version="1.0"'}
         last_response.should be_ok
-        response = MultiJson.decode(last_response.body)
+        response = MultiJson.load(last_response.body)
         response.should == {"client_application" => "my_consumer", "oauth_version"=>1, "strategies"=>["two_legged"]}
       end
 
@@ -74,7 +74,7 @@ describe OAuth::Rack::OAuthFilter do
         client_application.tokens.stub!(:first).and_return(AccessToken.new("my_token"))
         get '/',{},{"HTTP_AUTHORIZATION"=>'OAuth oauth_consumer_key="my_consumer",oauth_nonce="oiFHXoN0172eigBBUfgaZLdQg7ycGekv8iTdfkCStY",oauth_signature="y35B2DqTWaNlzNX0p4wv%2FJAGzg8%3D",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1295040394",oauth_token="my_token",oauth_version="1.0"'}
         last_response.should be_ok
-        response = MultiJson.decode(last_response.body)
+        response = MultiJson.load(last_response.body)
         response.should == {"client_application" => "my_consumer", "oauth_token"=>"my_token","oauth_version"=>1, "strategies"=>["oauth10_token","token","oauth10_access_token"]}
       end
 
@@ -84,7 +84,7 @@ describe OAuth::Rack::OAuthFilter do
         client_application.tokens.stub!(:first).and_return(RequestToken.new("my_token"))
         get '/',{},{"HTTP_AUTHORIZATION"=>'OAuth oauth_consumer_key="my_consumer",oauth_nonce="oiFHXoN0172eigBBUfgaZLdQg7ycGekv8iTdfkCStY",oauth_signature="y35B2DqTWaNlzNX0p4wv%2FJAGzg8%3D",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1295040394",oauth_token="my_token",oauth_version="1.0"'}
         last_response.should be_ok
-        response = MultiJson.decode(last_response.body)
+        response = MultiJson.load(last_response.body)
         response.should == {"client_application" => "my_consumer", "oauth_token"=>"my_token","oauth_version"=>1, "strategies"=>["oauth10_token","oauth10_request_token"]}
       end
     end
@@ -96,7 +96,7 @@ describe OAuth::Rack::OAuthFilter do
         it "authenticates" do
           get '/', {}, { "HTTP_AUTHORIZATION" => "Bearer valid_token" }
           last_response.should be_ok
-          response = MultiJson.decode(last_response.body)
+          response = MultiJson.load(last_response.body)
           response.should == { "oauth_token" => "valid_token", "oauth_version" => 2, "strategies"=> ["oauth20_token", "token"] }
         end
       end
@@ -105,7 +105,7 @@ describe OAuth::Rack::OAuthFilter do
         it "doesn't authenticate" do
           get '/', {}, { "HTTP_AUTHORIZATION" => "Bearer not_authorized" }
           last_response.should be_ok
-          response = MultiJson.decode(last_response.body)
+          response = MultiJson.load(last_response.body)
           response.should == {}
         end
       end
@@ -114,7 +114,7 @@ describe OAuth::Rack::OAuthFilter do
         it "doesn't authenticate with an invalidated token" do
           get '/', {}, { "HTTP_AUTHORIZATION" => "Bearer invalidated" }
           last_response.should be_ok
-          response = MultiJson.decode(last_response.body)
+          response = MultiJson.load(last_response.body)
           response.should == {}
         end
       end
@@ -126,7 +126,7 @@ describe OAuth::Rack::OAuthFilter do
           it "authenticates" do
             get '/', {}, { "HTTP_AUTHORIZATION" => "OAuth valid_token" }
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == { "oauth_token" => "valid_token", "oauth_version" => 2, "strategies"=> ["oauth20_token", "token"] }
           end
         end
@@ -135,7 +135,7 @@ describe OAuth::Rack::OAuthFilter do
           it "doesn't authenticate" do
             get '/', {}, { "HTTP_AUTHORIZATION" => "OAuth not_authorized" }
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == {}
           end
         end
@@ -144,7 +144,7 @@ describe OAuth::Rack::OAuthFilter do
           it "doesn't authenticate with an invalidated token" do
             get '/', {}, { "HTTP_AUTHORIZATION" => "OAuth invalidated" }
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == {}
           end
         end
@@ -156,7 +156,7 @@ describe OAuth::Rack::OAuthFilter do
         it "authenticates" do
           get '/', {}, { "HTTP_AUTHORIZATION" => "Token valid_token" }
           last_response.should be_ok
-          response = MultiJson.decode(last_response.body)
+          response = MultiJson.load(last_response.body)
           response.should == { "oauth_token" => "valid_token", "oauth_version" => 2, "strategies"=> ["oauth20_token", "token"] }
         end
       end
@@ -165,7 +165,7 @@ describe OAuth::Rack::OAuthFilter do
         it "doesn't authenticate" do
           get '/', {}, { "HTTP_AUTHORIZATION" => "Token not_authorized" }
           last_response.should be_ok
-          response = MultiJson.decode(last_response.body)
+          response = MultiJson.load(last_response.body)
           response.should == {}
         end
       end
@@ -174,7 +174,7 @@ describe OAuth::Rack::OAuthFilter do
         it "doesn't authenticate with an invalidated token" do
           get '/', {}, { "HTTP_AUTHORIZATION" => "Token invalidated" }
           last_response.should be_ok
-          response = MultiJson.decode(last_response.body)
+          response = MultiJson.load(last_response.body)
           response.should == {}
         end
       end
@@ -187,7 +187,7 @@ describe OAuth::Rack::OAuthFilter do
             get "/?#{name}=valid_token"
 
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == { "oauth_token" => "valid_token", "oauth_version" => 2, "strategies"=> ["oauth20_token", "token"] }
           end
         end
@@ -196,7 +196,7 @@ describe OAuth::Rack::OAuthFilter do
           it "doesn't authenticate" do
             get "/?#{name}=not_authorized"
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == {}
           end
         end
@@ -205,7 +205,7 @@ describe OAuth::Rack::OAuthFilter do
           it "doesn't authenticate with an invalidated token" do
             get "/?#{name}=invalidated"
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == {}
           end
         end
@@ -216,7 +216,7 @@ describe OAuth::Rack::OAuthFilter do
           it "authenticates" do
             post '/', name => 'valid_token'
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == { "oauth_token" => "valid_token", "oauth_version" => 2, "strategies"=> ["oauth20_token", "token"] }
           end
         end
@@ -225,7 +225,7 @@ describe OAuth::Rack::OAuthFilter do
           it "doesn't authenticate" do
             post '/', name => 'not_authorized'
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == {}
           end
         end
@@ -234,7 +234,7 @@ describe OAuth::Rack::OAuthFilter do
           it "doesn't authenticate with an invalidated token" do
             post '/', name => 'invalidated'
             last_response.should be_ok
-            response = MultiJson.decode(last_response.body)
+            response = MultiJson.load(last_response.body)
             response.should == {}
           end
         end
